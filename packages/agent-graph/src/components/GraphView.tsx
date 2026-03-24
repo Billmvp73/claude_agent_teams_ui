@@ -89,6 +89,8 @@ export function GraphView({
   }, [data, filters.showTasks, filters.showProcesses, filters.showEdges, simulation]);
 
   // ─── UNIFIED RAF LOOP: tick simulation + draw canvas ────────────────────
+  const idleFrameSkip = useRef(0);
+
   const animate = useCallback(() => {
     if (!runningRef.current) return;
 
@@ -99,14 +101,26 @@ export function GraphView({
     );
     lastTimeRef.current = now;
 
-    // 1. Tick simulation (updates positions, particles, effects in refs)
+    // 1. Tick simulation
     simulation.tick(dt);
 
     // 2. Update camera inertia
     camera.updateInertia();
 
-    // 3. Draw canvas imperatively (NO React re-render)
+    // 3. Adaptive frame rate: skip every other frame when idle (no particles, no effects, sim settled)
     const state = simulation.stateRef.current;
+    const isIdle = state.particles.length === 0 && state.effects.length === 0;
+    if (isIdle) {
+      idleFrameSkip.current++;
+      if (idleFrameSkip.current % 2 !== 0) {
+        rafRef.current = requestAnimationFrame(animate);
+        return; // skip draw, halve fps when idle
+      }
+    } else {
+      idleFrameSkip.current = 0;
+    }
+
+    // 4. Draw canvas imperatively (NO React re-render)
     canvasHandle.current?.draw({
       nodes: state.nodes,
       edges: state.edges,

@@ -10,7 +10,7 @@ import { useRef, useEffect, useImperativeHandle, forwardRef } from 'react';
 import type { GraphNode, GraphEdge, GraphParticle } from '../ports/types';
 import { drawBackground, createDepthParticles, updateDepthParticles, type DepthParticle } from '../canvas/background-layer';
 import { drawEdges } from '../canvas/draw-edges';
-import { drawParticles, buildEdgeMap } from '../canvas/draw-particles';
+import { drawParticles } from '../canvas/draw-particles';
 import { drawAgents } from '../canvas/draw-agents';
 import { drawTasks } from '../canvas/draw-tasks';
 import { drawProcesses } from '../canvas/draw-processes';
@@ -104,6 +104,10 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
     return () => observer.disconnect();
   }, []);
 
+  // Persistent caches (avoid GC pressure per frame)
+  const nodeMapCache = useRef(new Map<string, GraphNode>());
+  const edgeMapCache = useRef(new Map<string, GraphEdge>());
+
   // Imperative draw function — called from RAF, NOT from React render
   useImperativeHandle(ref, () => ({
     draw: (state: GraphDrawState) => {
@@ -116,37 +120,71 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
       const { w, h } = sizeRef.current;
       if (w === 0 || h === 0) return;
 
+      const cam = state.camera;
+      const zoom = cam.zoom;
+
+      // ─── Frustum culling: compute visible world-space bounds ──────────
+      const viewLeft = -cam.x / zoom;
+      const viewTop = -cam.y / zoom;
+      const viewRight = (w - cam.x) / zoom;
+      const viewBottom = (h - cam.y) / zoom;
+      const pad = 200; // overdraw padding for glow/labels
+
+      // ─── Reuse cached maps (avoid per-frame allocation) ───────────────
+      const nodeMap = nodeMapCache.current;
+      nodeMap.clear();
+      for (const n of state.nodes) nodeMap.set(n.id, n);
+
+      const edgeMap = edgeMapCache.current;
+      edgeMap.clear();
+      for (const e of state.edges) edgeMap.set(e.id, e);
+
+      // ─── Filter visible nodes (frustum cull) ─────────────────────────
+      const visibleNodes = state.nodes.filter((n) => {
+        const x = n.x ?? 0;
+        const y = n.y ?? 0;
+        return x > viewLeft - pad && x < viewRight + pad &&
+               y > viewTop - pad && y < viewBottom + pad;
+      });
+
+      // ─── LOD: reserved for future per-node detail reduction ────────────
+
+      const activeParticleEdges = new Set(state.particles.map((p) => p.edgeId));
+
+      // ─── Draw ─────────────────────────────────────────────────────────
       ctx.save();
       ctx.scale(dpr, dpr);
       ctx.clearRect(0, 0, w, h);
 
       // 1. Background (screen space)
       updateDepthParticles(starsRef.current, w, h, state.time > 0 ? 0.016 : 0);
-      drawBackground(ctx, w, h, starsRef.current, state.camera, state.time, {
+      drawBackground(ctx, w, h, starsRef.current, cam, state.time, {
         showHexGrid,
         showStarField,
       });
 
       // 2. World-space content
       ctx.save();
-      ctx.translate(state.camera.x, state.camera.y);
-      ctx.scale(state.camera.zoom, state.camera.zoom);
+      ctx.translate(cam.x, cam.y);
+      ctx.scale(zoom, zoom);
 
-      const nodeMap = new Map<string, GraphNode>();
-      for (const n of state.nodes) nodeMap.set(n.id, n);
-      const edgeMap = buildEdgeMap(state.edges);
-      const activeParticleEdges = new Set(state.particles.map((p) => p.edgeId));
+      // 2a. Edges (only those connecting visible nodes)
+      const visibleNodeIds = new Set(visibleNodes.map((n) => n.id));
+      const visibleEdges = state.edges.filter((e) =>
+        visibleNodeIds.has(e.source) || visibleNodeIds.has(e.target),
+      );
+      drawEdges(ctx, visibleEdges, nodeMap, state.time, activeParticleEdges);
 
-      // 2a. Edges
-      drawEdges(ctx, state.edges, nodeMap, state.time, activeParticleEdges);
+      // 2b. Particles (cap at 50 for performance)
+      const cappedParticles = state.particles.length > 50
+        ? state.particles.slice(-50)
+        : state.particles;
+      drawParticles(ctx, cappedParticles, edgeMap, nodeMap, state.time);
 
-      // 2b. Particles
-      drawParticles(ctx, state.particles, edgeMap, nodeMap, state.time);
-
-      // 2c. Nodes (back to front: process → task → member/lead)
-      drawProcesses(ctx, state.nodes, state.time, state.selectedNodeId, state.hoveredNodeId);
-      drawTasks(ctx, state.nodes, state.time, state.selectedNodeId, state.hoveredNodeId);
-      drawAgents(ctx, state.nodes, state.time, state.selectedNodeId, state.hoveredNodeId);
+      // 2c. Visible nodes only (back to front: process → task → member/lead)
+      drawProcesses(ctx, visibleNodes, state.time, state.selectedNodeId, state.hoveredNodeId);
+      drawTasks(ctx, visibleNodes, state.time, state.selectedNodeId, state.hoveredNodeId);
+      drawAgents(ctx, visibleNodes, state.time, state.selectedNodeId, state.hoveredNodeId);
 
       // 2d. Effects
       drawEffects(ctx, state.effects);
