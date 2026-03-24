@@ -1847,6 +1847,7 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
             open={addMemberDialogOpen}
             teamName={teamName}
             existingNames={data.members.map((m) => m.name)}
+            existingMembers={data.members}
             projectPath={data.config.projectPath}
             adding={addingMemberLoading}
             onClose={() => setAddMemberDialogOpen(false)}
