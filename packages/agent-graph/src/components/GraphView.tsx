@@ -136,17 +136,23 @@ export function GraphView({
     };
   }, [filters.paused, animate]);
 
-  // ─── Auto-fit on first data ─────────────────────────────────────────────
+  // ─── Auto-fit on first data + periodically until settled ────────────────
   const hasAutoFit = useRef(false);
+  const autoFitCount = useRef(0);
   useEffect(() => {
     if (data.nodes.length > 0 && !hasAutoFit.current) {
       hasAutoFit.current = true;
-      setTimeout(() => {
-        const el = containerRef.current;
-        if (el) {
-          camera.zoomToFit(simulation.stateRef.current.nodes, el.clientWidth, el.clientHeight);
-        }
-      }, 500);
+      // Fit multiple times as simulation settles (200ms, 600ms, 1500ms)
+      const timers = [200, 600, 1500].map((delay) =>
+        setTimeout(() => {
+          const el = containerRef.current;
+          if (el) {
+            camera.zoomToFit(simulation.stateRef.current.nodes, el.clientWidth, el.clientHeight);
+          }
+          autoFitCount.current++;
+        }, delay),
+      );
+      return () => timers.forEach(clearTimeout);
     }
   }, [data.nodes.length, camera, simulation.stateRef]);
 

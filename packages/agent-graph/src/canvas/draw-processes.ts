@@ -6,6 +6,7 @@
 import type { GraphNode } from '../ports/types';
 import { COLORS } from '../constants/colors';
 import { NODE } from '../constants/canvas-constants';
+import { hexWithAlpha } from './render-cache';
 
 /**
  * Draw all process nodes as small circles.
@@ -31,8 +32,9 @@ export function drawProcesses(
 
     // Glow
     const grad = ctx.createRadialGradient(x, y, 0, x, y, r * 2);
-    grad.addColorStop(0, (node.color ?? COLORS.tool_calling) + '30');
-    grad.addColorStop(1, (node.color ?? COLORS.tool_calling) + '00');
+    const procColor = node.color ?? COLORS.tool_calling;
+    grad.addColorStop(0, hexWithAlpha(procColor, 0.19));
+    grad.addColorStop(1, hexWithAlpha(procColor, 0));
     ctx.fillStyle = grad;
     ctx.beginPath();
     ctx.arc(x, y, r * 2, 0, Math.PI * 2);
@@ -43,7 +45,7 @@ export function drawProcesses(
     ctx.arc(x, y, r, 0, Math.PI * 2);
     ctx.fillStyle = isSelected ? COLORS.cardBgSelected : COLORS.cardBg;
     ctx.fill();
-    ctx.strokeStyle = (node.color ?? COLORS.tool_calling) + (isHovered ? 'CC' : '80');
+    ctx.strokeStyle = hexWithAlpha(procColor, 0.38);
     ctx.lineWidth = isSelected ? 2 : 1;
     ctx.stroke();
 
@@ -51,7 +53,7 @@ export function drawProcesses(
     const spinAngle = time * 2;
     ctx.beginPath();
     ctx.arc(x, y, r + 3, spinAngle, spinAngle + Math.PI * 0.8);
-    ctx.strokeStyle = (node.color ?? COLORS.tool_calling) + '60';
+    ctx.strokeStyle = hexWithAlpha(procColor, 0.38);
     ctx.lineWidth = 1.5;
     ctx.stroke();
 

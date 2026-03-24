@@ -4,10 +4,10 @@
  */
 
 import type { GraphNode, GraphEdge, GraphParticle } from '../ports/types';
-import { COLORS, alphaHex } from '../constants/colors';
+import { COLORS } from '../constants/colors';
 import { PARTICLE_DRAW, BEAM } from '../constants/canvas-constants';
 import { bezierPoint, computeControlPoints, type ControlPoints } from './draw-edges';
-import { getGlowSprite } from './render-cache';
+import { getGlowSprite, hexWithAlpha } from './render-cache';
 
 /**
  * Build a lookup from edge.id → edge for fast particle→edge resolution.
@@ -57,7 +57,7 @@ export function drawParticles(
       const pos = getWobbledPosition(source, target, cp, p.progress, wobbleAmp, phaseOffset, time);
       ctx.font = `${PARTICLE_DRAW.labelFontSize}px monospace`;
       ctx.textAlign = 'center';
-      ctx.fillStyle = color + '90';
+      ctx.fillStyle = hexWithAlpha(color, 0.56);
       ctx.fillText(p.label, pos.x, pos.y + PARTICLE_DRAW.labelYOffset);
     }
   }
@@ -114,7 +114,7 @@ function drawParticleTrail(
     const alpha = (1 - i / trailSegments) * 0.3;
     const trailSize = size * (1 - i / trailSegments) * 0.5;
 
-    ctx.fillStyle = color + alphaHex(alpha);
+    ctx.fillStyle = hexWithAlpha(color, alpha);
     ctx.beginPath();
     ctx.arc(pos.x, pos.y, trailSize, 0, Math.PI * 2);
     ctx.fill();

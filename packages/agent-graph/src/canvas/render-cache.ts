@@ -7,6 +7,42 @@ const glowCache = new Map<string, HTMLCanvasElement>();
 const textCache = new Map<string, number>();
 const TEXT_CACHE_LIMIT = 2000;
 
+// ─── Color resolution: named colors → hex ───────────────────────────────────
+
+let _resolverCtx: CanvasRenderingContext2D | null = null;
+const _hexCache = new Map<string, string>();
+
+/**
+ * Ensure a color string is in #rrggbb hex format.
+ * Resolves CSS named colors (purple → #800080), shorthand (#abc → #aabbcc).
+ */
+function ensureHex(color: string): string {
+  if (color.startsWith('#') && color.length === 7) return color;
+
+  let hex = _hexCache.get(color);
+  if (hex) return hex;
+
+  if (color.startsWith('#') && color.length === 4) {
+    hex = `#${color[1]}${color[1]}${color[2]}${color[2]}${color[3]}${color[3]}`;
+  } else {
+    // Resolve named/rgb/hsl colors via canvas
+    _resolverCtx ??= document.createElement('canvas').getContext('2d')!;
+    _resolverCtx.fillStyle = '#000000';
+    _resolverCtx.fillStyle = color;
+    hex = _resolverCtx.fillStyle; // always returns #rrggbb
+  }
+
+  _hexCache.set(color, hex);
+  return hex;
+}
+
+/** Build a hex color with alpha: "#rrggbbaa" */
+function hexWithAlpha(color: string, alpha: number): string {
+  return ensureHex(color) + Math.round(Math.max(0, Math.min(1, alpha)) * 255).toString(16).padStart(2, '0');
+}
+
+// ─── Glow Sprite Cache ──────────────────────────────────────────────────────
+
 /**
  * Get or create a pre-rendered radial gradient glow sprite.
  */
@@ -16,7 +52,8 @@ export function getGlowSprite(
   innerAlpha: number,
   outerAlpha: number,
 ): HTMLCanvasElement {
-  const key = `${color}|${radius}|${innerAlpha}|${outerAlpha}`;
+  const hex = ensureHex(color);
+  const key = `${hex}|${radius}|${innerAlpha}|${outerAlpha}`;
   let canvas = glowCache.get(key);
   if (canvas) return canvas;
 
@@ -28,8 +65,8 @@ export function getGlowSprite(
   const cx = size / 2;
 
   const grad = ctx.createRadialGradient(cx, cx, 0, cx, cx, radius);
-  grad.addColorStop(0, `${color}${Math.round(innerAlpha * 255).toString(16).padStart(2, '0')}`);
-  grad.addColorStop(1, `${color}${Math.round(outerAlpha * 255).toString(16).padStart(2, '0')}`);
+  grad.addColorStop(0, hexWithAlpha(hex, innerAlpha));
+  grad.addColorStop(1, hexWithAlpha(hex, outerAlpha));
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, size, size);
 
@@ -45,7 +82,8 @@ export function getAgentGlowSprite(
   innerRadius: number,
   outerRadius: number,
 ): HTMLCanvasElement {
-  const key = `agent|${color}|${innerRadius}|${outerRadius}`;
+  const hex = ensureHex(color);
+  const key = `agent|${hex}|${innerRadius}|${outerRadius}`;
   let canvas = glowCache.get(key);
   if (canvas) return canvas;
 
@@ -57,9 +95,9 @@ export function getAgentGlowSprite(
   const cx = size / 2;
 
   const grad = ctx.createRadialGradient(cx, cx, innerRadius, cx, cx, outerRadius);
-  grad.addColorStop(0, `${color}40`);
-  grad.addColorStop(0.5, `${color}15`);
-  grad.addColorStop(1, `${color}00`);
+  grad.addColorStop(0, hexWithAlpha(hex, 0.25));
+  grad.addColorStop(0.5, hexWithAlpha(hex, 0.08));
+  grad.addColorStop(1, hexWithAlpha(hex, 0));
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, size, size);
 
@@ -84,3 +122,6 @@ export function measureTextCached(ctx: CanvasRenderingContext2D, font: string, t
   textCache.set(key, w);
   return w;
 }
+
+/** Exported for use by draw functions that need hex+alpha colors */
+export { ensureHex, hexWithAlpha };

@@ -120,8 +120,8 @@ export function useGraphSimulation(): UseGraphSimulationResult {
     const forceNodes: ForceNode[] = nodes.map((n) => ({
       id: n.id,
       kind: n.kind,
-      x: n.x ?? (Math.random() - 0.5) * 200,
-      y: n.y ?? (Math.random() - 0.5) * 200,
+      x: n.x ?? (Math.random() - 0.5) * 500,
+      y: n.y ?? (Math.random() - 0.5) * 500,
       vx: n.vx ?? 0,
       vy: n.vy ?? 0,
       fx: n.fx,

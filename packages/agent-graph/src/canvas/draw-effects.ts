@@ -6,6 +6,7 @@
 import { alphaHex } from '../constants/colors';
 import { SPAWN_FX, COMPLETE_FX } from '../constants/canvas-constants';
 import { drawHexagon } from './draw-misc';
+import { hexWithAlpha } from './render-cache';
 
 // ─── Effect Type ────────────────────────────────────────────────────────────
 
@@ -157,7 +158,7 @@ function drawShatterEffect(ctx: CanvasRenderingContext2D, fx: VisualEffect, prog
     // Glow
     const grad = ctx.createRadialGradient(px, py, 0, px, py, size * 3);
     grad.addColorStop(0, fx.color + alphaHex(alpha * 0.4));
-    grad.addColorStop(1, fx.color + '00');
+    grad.addColorStop(1, hexWithAlpha(fx.color, 0));
     ctx.fillStyle = grad;
     ctx.beginPath();
     ctx.arc(px, py, size * 3, 0, Math.PI * 2);

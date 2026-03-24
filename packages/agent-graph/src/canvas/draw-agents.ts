@@ -8,7 +8,7 @@ import type { GraphNode } from '../ports/types';
 import { COLORS, getStateColor, alphaHex } from '../constants/colors';
 import { NODE, AGENT_DRAW, CONTEXT_RING, ANIM, MIN_VISIBLE_OPACITY } from '../constants/canvas-constants';
 import { drawHexagon } from './draw-misc';
-import { getAgentGlowSprite } from './render-cache';
+import { getAgentGlowSprite, ensureHex, hexWithAlpha } from './render-cache';
 
 /**
  * Draw all member/lead nodes on the canvas.
@@ -129,16 +129,16 @@ function drawHexBody(
     x,
     y + scanY + AGENT_DRAW.scanlineHalfH,
   );
-  grad.addColorStop(0, `${color}00`);
-  grad.addColorStop(0.5, `${color}20`);
-  grad.addColorStop(1, `${color}00`);
+  grad.addColorStop(0, hexWithAlpha(color, 0));
+  grad.addColorStop(0.5, hexWithAlpha(color, 0.13));
+  grad.addColorStop(1, hexWithAlpha(color, 0));
   ctx.fillStyle = grad;
   ctx.fillRect(x - r, y + scanY - AGENT_DRAW.scanlineHalfH, r * 2, AGENT_DRAW.scanlineHalfH * 2);
   ctx.restore();
 
   // Border
   drawHexagon(ctx, x, y, r);
-  ctx.strokeStyle = color + (isHovered ? 'CC' : '80');
+  ctx.strokeStyle = hexWithAlpha(color, isHovered ? 0.8 : 0.5);
   ctx.lineWidth = isSelected ? 2 : 1;
   ctx.stroke();
 }
@@ -272,7 +272,7 @@ function drawSelectionRing(
   color: string,
 ): void {
   drawHexagon(ctx, x, y, r + 4);
-  ctx.strokeStyle = color + 'AA';
+  ctx.strokeStyle = hexWithAlpha(color, 0.67);
   ctx.lineWidth = 2;
   ctx.setLineDash([4, 4]);
   ctx.stroke();
