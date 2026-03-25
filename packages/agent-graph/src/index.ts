@@ -7,8 +7,8 @@
  */
 
 // ─── Components ──────────────────────────────────────────────────────────────
-export { GraphView } from './components/GraphView';
-export type { GraphViewProps } from './components/GraphView';
+export { GraphView } from './ui/GraphView';
+export type { GraphViewProps } from './ui/GraphView';
 
 // ─── Port Interfaces (for adapters in host project) ─────────────────────────
 export type { GraphDataPort } from './ports/GraphDataPort';

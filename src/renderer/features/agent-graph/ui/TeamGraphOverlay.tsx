@@ -6,7 +6,7 @@
 import { useCallback } from 'react';
 import { GraphView } from '@claude-teams/agent-graph';
 import type { GraphEventPort, GraphDomainRef } from '@claude-teams/agent-graph';
-import { useTeamGraphAdapter } from './useTeamGraphAdapter';
+import { useTeamGraphAdapter } from '../adapters/useTeamGraphAdapter';
 
 export interface TeamGraphOverlayProps {
   teamName: string;
