@@ -224,6 +224,7 @@ export function GraphView({
     if (isPanningRef.current) {
       camera.handlePanEnd();
       isPanningRef.current = false;
+      setSelectedNodeId(null); // hide popover after pan
       return;
     }
 
@@ -232,9 +233,11 @@ export function GraphView({
       setSelectedNodeId(clickedId);
       const node = simulation.stateRef.current.nodes.find((n) => n.id === clickedId);
       if (node) events?.onNodeClick?.(node.domainRef);
-    } else if (!interaction.isDragging.current) {
-      setSelectedNodeId(null);
-      events?.onBackgroundClick?.();
+    } else {
+      setSelectedNodeId(null); // click on empty space — hide popover
+      if (!interaction.isDragging.current) {
+        events?.onBackgroundClick?.();
+      }
     }
   }, [interaction, simulation.stateRef, events, camera]);
 
