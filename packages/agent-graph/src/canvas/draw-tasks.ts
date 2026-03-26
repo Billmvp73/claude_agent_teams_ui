@@ -42,7 +42,8 @@ export function drawTasks(
 
 function getTaskOpacity(node: GraphNode): number {
   if (node.taskStatus === 'deleted') return 0;
-  if (node.taskStatus === 'completed') return 0.5;
+  if (node.reviewState === 'approved') return 0.65;
+  if (node.taskStatus === 'completed') return 0.45;
   return 1;
 }
 
@@ -64,12 +65,15 @@ function drawTaskPill(
   const statusColor = getTaskStatusColor(node.taskStatus);
   const reviewColor = getReviewStateColor(node.reviewState);
 
-  // Pulse only for: in_progress, review, needsFix, or needsClarification
+  // Pulse only for active work: in_progress, review, needsFix, needsClarification
+  // completed + approved = static (no pulse)
   const needsAttention =
-    node.taskStatus === 'in_progress' ||
+    node.taskStatus === 'in_progress' &&
+    node.reviewState !== 'approved' ||
     node.reviewState === 'review' ||
     node.reviewState === 'needsFix' ||
     node.needsClarification != null;
+  const isFinished = node.taskStatus === 'completed' || node.reviewState === 'approved';
   const breathe = needsAttention
     ? 1 + ANIM.breathe.activeAmp * Math.sin(time * ANIM.breathe.activeSpeed)
     : 1;
@@ -143,10 +147,29 @@ function drawTaskPill(
   // Subject text
   if (node.sublabel) {
     ctx.font = `${TASK_PILL.subjectFontSize}px sans-serif`;
-    ctx.fillStyle = COLORS.textDim;
+    ctx.fillStyle = isFinished ? COLORS.textMuted : COLORS.textDim;
     const maxW = w - TASK_PILL.textOffsetX - 8;
     const subject = truncateText(ctx, node.sublabel, maxW, ctx.font);
     ctx.fillText(subject, -halfW + TASK_PILL.textOffsetX, 8);
+  }
+
+  // Approved badge: checkmark at right side
+  if (node.reviewState === 'approved') {
+    ctx.font = 'bold 11px sans-serif';
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = COLORS.reviewApproved;
+    ctx.fillText('\u2713', halfW - 8, 0); // ✓
+  }
+
+  // Completed: subtle strikethrough line
+  if (node.taskStatus === 'completed' && node.reviewState !== 'approved') {
+    ctx.beginPath();
+    ctx.moveTo(-halfW + TASK_PILL.textOffsetX, 0);
+    ctx.lineTo(halfW - 10, 0);
+    ctx.strokeStyle = COLORS.textMuted;
+    ctx.lineWidth = 0.5;
+    ctx.stroke();
   }
 
   ctx.restore();
