@@ -53,6 +53,17 @@ export interface UseGraphSimulationResult {
   tick: (dt: number) => void;
 }
 
+// ─── Deterministic hash for stable initial positions ─────────────────────────
+
+/** Returns a value in [-0.5, 0.5] deterministically from string + seed */
+function deterministicPosition(id: string, seed: number): number {
+  let hash = seed * 2654435761;
+  for (let i = 0; i < id.length; i++) {
+    hash = ((hash << 5) - hash + id.charCodeAt(i)) | 0;
+  }
+  return ((hash & 0x7fffffff) % 1000) / 1000 - 0.5;
+}
+
 // ─── Hook ───────────────────────────────────────────────────────────────────
 
 export function useGraphSimulation(): UseGraphSimulationResult {
@@ -108,8 +119,9 @@ export function useGraphSimulation(): UseGraphSimulationResult {
       .map((n) => ({
         id: n.id,
         kind: n.kind,
-        x: n.x ?? (Math.random() - 0.5) * 500,
-        y: n.y ?? (Math.random() - 0.5) * 500,
+        // Deterministic initial positions from node ID hash — same layout every time
+        x: n.x ?? deterministicPosition(n.id, 0) * 500,
+        y: n.y ?? deterministicPosition(n.id, 1) * 500,
         vx: n.vx ?? 0,
         vy: n.vy ?? 0,
         fx: n.fx,
