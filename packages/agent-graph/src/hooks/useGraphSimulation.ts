@@ -145,6 +145,19 @@ export function useGraphSimulation(): UseGraphSimulationResult {
     // Run simulation to near-completion so nodes are settled on first render
     for (let i = 0; i < 120; i++) sim.tick();
     sim.alpha(0); // fully settled — no more movement until new data
+
+    // Copy settled positions BACK to GraphNode objects
+    const simNodeMap = new Map<string, ForceNode>();
+    for (const sn of sim.nodes()) simNodeMap.set(sn.id, sn);
+    for (const node of nodes) {
+      const sn = simNodeMap.get(node.id);
+      if (sn) {
+        node.x = sn.x;
+        node.y = sn.y;
+        node.vx = sn.vx;
+        node.vy = sn.vy;
+      }
+    }
   }, [initSimulation]);
 
   // Track previous node IDs and states for effect spawning
