@@ -72,6 +72,11 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
   const starsRef = useRef<DepthParticle[]>([]);
   const sizeRef = useRef({ w: 0, h: 0 });
 
+  // Performance tracking
+  const perfRef = useRef({ frames: 0, fps: 0, frameTimeMs: 0, lastFpsUpdate: 0, frameTimes: [] as number[] });
+  // Rate-limited error logging (prevent console flood at 60fps)
+  const lastDrawErrorRef = useRef(0);
+
   // Update bloom intensity without recreating
   useEffect(() => {
     bloomRef.current.setIntensity(bloomIntensity);
@@ -116,9 +121,13 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
 
+      const frameStart = performance.now();
+
       const dpr = window.devicePixelRatio || 1;
       const { w, h } = sizeRef.current;
       if (w === 0 || h === 0) return;
+
+      try {
 
       const cam = state.camera;
       const zoom = cam.zoom;
@@ -195,6 +204,46 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
       // 3. Bloom post-processing
       if (bloomIntensity > 0) {
         bloomRef.current.apply(canvas, ctx);
+      }
+
+      // 4. Performance overlay (enabled via ?perf in URL)
+      const perf = perfRef.current;
+      const frameMs = performance.now() - frameStart;
+      perf.frameTimes.push(frameMs);
+      perf.frames++;
+      if (perf.frameTimes.length > 120) perf.frameTimes.shift();
+
+      const now = performance.now();
+      if (now - perf.lastFpsUpdate > 1000) {
+        perf.fps = perf.frames;
+        perf.frames = 0;
+        perf.lastFpsUpdate = now;
+        const sorted = [...perf.frameTimes].sort((a, b) => a - b);
+        perf.frameTimeMs = sorted[Math.floor(sorted.length * 0.95)] ?? 0;
+      }
+
+      if (typeof window !== 'undefined' && window.location?.search?.includes('perf')) {
+        ctx.save();
+        ctx.scale(dpr, dpr);
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+        ctx.fillRect(w - 130, 4, 126, 48);
+        ctx.font = '10px monospace';
+        ctx.fillStyle = perf.fps >= 50 ? '#66ffaa' : perf.fps >= 30 ? '#ffbb44' : '#ff5566';
+        ctx.textAlign = 'right';
+        ctx.fillText(`${perf.fps} fps`, w - 10, 18);
+        ctx.fillStyle = '#aaeeff';
+        ctx.fillText(`p95: ${perf.frameTimeMs.toFixed(1)}ms`, w - 10, 32);
+        ctx.fillText(`${state.nodes.length} nodes ${state.edges.length} edges`, w - 10, 46);
+        ctx.restore();
+      }
+
+      } catch (err) {
+        // Rate-limited error logging — max once per 5 seconds
+        const now = performance.now();
+        if (now - lastDrawErrorRef.current > 5000) {
+          lastDrawErrorRef.current = now;
+          console.error('[AgentGraph] Draw error:', err);
+        }
       }
     },
     getCanvas: () => canvasRef.current,
