@@ -112,8 +112,16 @@ export function useGraphSimulation(): UseGraphSimulationResult {
     return sim;
   }, []);
 
-  // Sync graph data to d3-force
+  // Track node set identity to avoid re-running simulation when data reference changes but content is same
+  const lastNodeIdsHash = useRef('');
+
+  // Sync graph data to d3-force — ONLY when node set actually changes
   const syncSimulation = useCallback((nodes: GraphNode[], edges: GraphEdge[]) => {
+    // Build hash of node IDs + kinds to detect actual changes
+    const hash = nodes.map((n) => n.id).sort().join(',');
+    if (hash === lastNodeIdsHash.current) return; // same nodes — skip re-simulation
+    lastNodeIdsHash.current = hash;
+
     let sim = simRef.current;
     if (!sim) sim = initSimulation();
 
