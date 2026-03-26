@@ -24,6 +24,8 @@ export class TeamGraphAdapter {
   #lastDataHash = '';
   #cachedResult: GraphDataPort = TeamGraphAdapter.#emptyResult('');
   readonly #seenRelated = new Set<string>();
+  readonly #seenMessageIds = new Set<string>();
+  #initialMessagesSeen = false;
 
   // ─── Static factory ──────────────────────────────────────────────────────
   static create(): TeamGraphAdapter {
@@ -89,6 +91,8 @@ export class TeamGraphAdapter {
   [Symbol.dispose](): void {
     this.#cachedResult = TeamGraphAdapter.#emptyResult('');
     this.#seenRelated.clear();
+    this.#seenMessageIds.clear();
+    this.#initialMessagesSeen = false;
     this.#lastDataHash = '';
   }
 
@@ -251,13 +255,30 @@ export class TeamGraphAdapter {
     edges: GraphEdge[]
   ): void {
     const recent = messages.slice(-20);
+
+    // First call: record all existing message IDs without creating particles.
+    // This prevents old messages from spawning particles when the graph opens.
+    if (!this.#initialMessagesSeen) {
+      this.#initialMessagesSeen = true;
+      for (const msg of recent) {
+        const msgKey = msg.messageId ?? msg.timestamp;
+        this.#seenMessageIds.add(msgKey);
+      }
+      return;
+    }
+
+    // Subsequent calls: only create particles for messages not yet seen.
     for (const msg of recent) {
+      const msgKey = msg.messageId ?? msg.timestamp;
+      if (this.#seenMessageIds.has(msgKey)) continue;
+      this.#seenMessageIds.add(msgKey);
+
       const edgeId = TeamGraphAdapter.#resolveMessageEdge(msg, teamName, leadId, edges);
       if (!edgeId) continue;
 
       const ts = typeof msg.timestamp === 'string' ? new Date(msg.timestamp).getTime() : 0;
       particles.push({
-        id: `particle:msg:${msg.messageId ?? msg.timestamp}`,
+        id: `particle:msg:${msgKey}`,
         edgeId,
         progress: (ts % 800) / 1000,
         kind: 'message',

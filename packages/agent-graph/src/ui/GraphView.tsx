@@ -50,8 +50,9 @@ export function GraphView({
     paused: !(config?.animationEnabled ?? true),
   });
 
-  // Force re-render for popover position updates
-  const [, forceUpdate] = useState(0);
+  // Ref mirror of selectedNodeId — read by RAF loop to avoid recreating animate on selection change
+  const selectedNodeIdRef = useRef<string | null>(null);
+  selectedNodeIdRef.current = selectedNodeId;
 
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasHandle = useRef<GraphCanvasHandle>(null);
@@ -128,12 +129,12 @@ export function GraphView({
       effects: state.effects,
       time: state.time,
       camera: camera.transformRef.current,
-      selectedNodeId,
+      selectedNodeId: selectedNodeIdRef.current,
       hoveredNodeId: interaction.hoveredNodeId.current,
     });
 
     rafRef.current = requestAnimationFrame(animate);
-  }, [simulation, camera, selectedNodeId, interaction.hoveredNodeId]);
+  }, [simulation, camera, interaction.hoveredNodeId]);
 
   // Start/stop RAF
   useEffect(() => {
@@ -229,7 +230,6 @@ export function GraphView({
     const clickedId = interaction.handleMouseUp();
     if (clickedId) {
       setSelectedNodeId(clickedId);
-      forceUpdate((n) => n + 1);
       const node = simulation.stateRef.current.nodes.find((n) => n.id === clickedId);
       if (node) events?.onNodeClick?.(node.domainRef);
     } else if (!interaction.isDragging.current) {
