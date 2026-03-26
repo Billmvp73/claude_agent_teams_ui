@@ -64,9 +64,13 @@ function drawTaskPill(
   const statusColor = getTaskStatusColor(node.taskStatus);
   const reviewColor = getReviewStateColor(node.reviewState);
 
-  // Breathing for in_progress tasks
-  const isActive = node.taskStatus === 'in_progress';
-  const breathe = isActive
+  // Pulse only for: in_progress, review, needsFix, or needsClarification
+  const needsAttention =
+    node.taskStatus === 'in_progress' ||
+    node.reviewState === 'review' ||
+    node.reviewState === 'needsFix' ||
+    node.needsClarification != null;
+  const breathe = needsAttention
     ? 1 + ANIM.breathe.activeAmp * Math.sin(time * ANIM.breathe.activeSpeed)
     : 1;
   const scale = breathe;
@@ -75,9 +79,9 @@ function drawTaskPill(
   ctx.translate(x, y);
   ctx.scale(scale, scale);
 
-  // Shadow
+  // Shadow — stronger for attention tasks
   ctx.shadowColor = statusColor + '40';
-  ctx.shadowBlur = isActive ? 12 : 6;
+  ctx.shadowBlur = needsAttention ? 12 : 4;
 
   // Background fill
   ctx.beginPath();
