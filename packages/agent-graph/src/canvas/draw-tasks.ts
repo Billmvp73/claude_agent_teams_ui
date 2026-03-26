@@ -7,6 +7,7 @@ import type { GraphNode } from '../ports/types';
 import { COLORS, getTaskStatusColor, getReviewStateColor, alphaHex } from '../constants/colors';
 import { TASK_PILL, MIN_VISIBLE_OPACITY, ANIM } from '../constants/canvas-constants';
 import { truncateText } from './draw-misc';
+import { hexWithAlpha } from './render-cache';
 
 /**
  * Draw all task nodes as pill-shaped cards.
@@ -65,16 +66,14 @@ function drawTaskPill(
   const statusColor = getTaskStatusColor(node.taskStatus);
   const reviewColor = getReviewStateColor(node.reviewState);
 
-  // Pulse only for active work: in_progress, review, needsFix, needsClarification
-  // completed + approved = static (no pulse)
+  // Pulse only for active work — completed + approved = static
   const needsAttention =
-    node.taskStatus === 'in_progress' &&
-    node.reviewState !== 'approved' ||
+    (node.taskStatus === 'in_progress' && node.reviewState !== 'approved') ||
     node.reviewState === 'review' ||
     node.reviewState === 'needsFix' ||
-    node.needsClarification != null;
+    (node.needsClarification != null && node.needsClarification !== null);
   const isFinished = node.taskStatus === 'completed' || node.reviewState === 'approved';
-  const breathe = needsAttention
+  const breathe = needsAttention && !isFinished
     ? 1 + ANIM.breathe.activeAmp * Math.sin(time * ANIM.breathe.activeSpeed)
     : 1;
   const scale = breathe;
@@ -84,7 +83,7 @@ function drawTaskPill(
   ctx.scale(scale, scale);
 
   // Shadow — stronger for attention tasks
-  ctx.shadowColor = statusColor + '40';
+  ctx.shadowColor = hexWithAlpha(statusColor, 0.25);
   ctx.shadowBlur = needsAttention ? 12 : 4;
 
   // Background fill
@@ -101,15 +100,18 @@ function drawTaskPill(
   // Border
   ctx.beginPath();
   ctx.roundRect(-halfW, -halfH, w, h, r);
-  ctx.strokeStyle = isSelected ? statusColor + 'CC' : statusColor + '80';
+  ctx.strokeStyle = hexWithAlpha(statusColor, isSelected ? 0.8 : 0.5);
   ctx.lineWidth = isSelected ? 2 : 1;
   ctx.stroke();
 
-  // Review state overlay border
+  // Review state overlay border — pulsing for review/needsFix, STATIC for approved
   if (reviewColor !== 'transparent') {
     ctx.beginPath();
     ctx.roundRect(-halfW - 1, -halfH - 1, w + 2, h + 2, r + 1);
-    ctx.strokeStyle = reviewColor + alphaHex(0.5 + 0.3 * Math.sin(time * 3));
+    const reviewAlpha = node.reviewState === 'approved'
+      ? 0.6  // static — no pulse
+      : 0.5 + 0.3 * Math.sin(time * 3); // pulsing for review/needsFix
+    ctx.strokeStyle = reviewColor + alphaHex(reviewAlpha);
     ctx.lineWidth = 1.5;
     ctx.stroke();
   }
@@ -141,7 +143,7 @@ function drawTaskPill(
   ctx.font = `bold ${TASK_PILL.idFontSize}px monospace`;
   ctx.textAlign = 'left';
   ctx.textBaseline = 'middle';
-  ctx.fillStyle = COLORS.textPrimary;
+  ctx.fillStyle = isFinished ? COLORS.textDim : COLORS.textPrimary;
   ctx.fillText(displayId, -halfW + TASK_PILL.textOffsetX, -4);
 
   // Subject text
