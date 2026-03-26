@@ -89,10 +89,14 @@ export class KanbanLayoutEngine {
 
   /**
    * Determine which kanban column a task belongs to.
-   * Review state takes priority: if reviewState !== 'none', task goes to 'review' column.
+   * Columns: todo → wip → done → review → approved
+   * approved is separate from review — approved goes after review.
    */
   static #resolveColumn(task: GraphNode): string {
-    if (task.reviewState && task.reviewState !== 'none') return 'review';
+    // Approved = separate column (after review)
+    if (task.reviewState === 'approved') return 'approved';
+    // Active review/needsFix = review column (next to done)
+    if (task.reviewState === 'review' || task.reviewState === 'needsFix') return 'review';
     switch (task.taskStatus) {
       case 'in_progress':
         return 'wip';

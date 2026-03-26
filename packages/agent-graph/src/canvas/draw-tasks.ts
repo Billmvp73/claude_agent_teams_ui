@@ -4,7 +4,7 @@
  */
 
 import type { GraphNode } from '../ports/types';
-import { COLORS, getTaskStatusColor, getReviewStateColor, alphaHex } from '../constants/colors';
+import { COLORS, getTaskStatusColor, getReviewStateColor } from '../constants/colors';
 import { TASK_PILL, MIN_VISIBLE_OPACITY, ANIM } from '../constants/canvas-constants';
 import { truncateText } from './draw-misc';
 import { hexWithAlpha } from './render-cache';
@@ -71,7 +71,7 @@ function drawTaskPill(
     (node.taskStatus === 'in_progress' && node.reviewState !== 'approved') ||
     node.reviewState === 'review' ||
     node.reviewState === 'needsFix' ||
-    (node.needsClarification != null && node.needsClarification !== null);
+    (node.needsClarification != null);
   const isFinished = node.taskStatus === 'completed' || node.reviewState === 'approved';
   const breathe = needsAttention && !isFinished
     ? 1 + ANIM.breathe.activeAmp * Math.sin(time * ANIM.breathe.activeSpeed)
@@ -111,7 +111,7 @@ function drawTaskPill(
     const reviewAlpha = node.reviewState === 'approved'
       ? 0.6  // static — no pulse
       : 0.5 + 0.3 * Math.sin(time * 3); // pulsing for review/needsFix
-    ctx.strokeStyle = reviewColor + alphaHex(reviewAlpha);
+    ctx.strokeStyle = hexWithAlpha(reviewColor, reviewAlpha);
     ctx.lineWidth = 1.5;
     ctx.stroke();
   }
@@ -121,7 +121,7 @@ function drawTaskPill(
     const pulseAlpha = 0.4 + 0.4 * Math.sin(time * 4);
     ctx.beginPath();
     ctx.roundRect(-halfW - 2, -halfH - 2, w + 4, h + 4, r + 2);
-    ctx.strokeStyle = COLORS.error + alphaHex(pulseAlpha);
+    ctx.strokeStyle = hexWithAlpha(COLORS.error, pulseAlpha);
     ctx.lineWidth = 1;
     ctx.stroke();
   }
