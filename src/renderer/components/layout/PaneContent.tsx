@@ -4,6 +4,7 @@
  */
 
 import { TabUIProvider } from '@renderer/contexts/TabUIContext';
+import { TeamGraphTab } from '@renderer/features/agent-graph/ui/TeamGraphTab';
 
 import { DashboardView } from '../dashboard/DashboardView';
 import { ExtensionStoreView } from '../extensions/ExtensionStoreView';
@@ -12,7 +13,6 @@ import { SessionReportTab } from '../report/SessionReportTab';
 import { SchedulesView } from '../schedules/SchedulesView';
 import { SettingsView } from '../settings/SettingsView';
 import { TeamDetailView } from '../team/TeamDetailView';
-import { TeamGraphTab } from '@renderer/features/agent-graph/ui/TeamGraphTab';
 import { TeamListView } from '../team/TeamListView';
 
 import { SessionTabContent } from './SessionTabContent';

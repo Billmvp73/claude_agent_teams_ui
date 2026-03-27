@@ -4,10 +4,13 @@
  */
 
 import { useMemo, useRef } from 'react';
+
 import { useStore } from '@renderer/store';
 import { useShallow } from 'zustand/react/shallow';
-import type { GraphDataPort } from '@claude-teams/agent-graph';
+
 import { TeamGraphAdapter } from './TeamGraphAdapter';
+
+import type { GraphDataPort } from '@claude-teams/agent-graph';
 
 export function useTeamGraphAdapter(teamName: string): GraphDataPort {
   const adapterRef = useRef<TeamGraphAdapter>(TeamGraphAdapter.create());

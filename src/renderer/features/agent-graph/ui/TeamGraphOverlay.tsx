@@ -4,9 +4,12 @@
  */
 
 import { useCallback } from 'react';
+
 import { GraphView } from '@claude-teams/agent-graph';
-import type { GraphEventPort, GraphDomainRef } from '@claude-teams/agent-graph';
+
 import { useTeamGraphAdapter } from '../adapters/useTeamGraphAdapter';
+
+import type { GraphDomainRef, GraphEventPort } from '@claude-teams/agent-graph';
 
 export interface TeamGraphOverlayProps {
   teamName: string;
@@ -14,11 +17,11 @@ export interface TeamGraphOverlayProps {
   onPinAsTab?: () => void;
 }
 
-export function TeamGraphOverlay({
+export const TeamGraphOverlay = ({
   teamName,
   onClose,
   onPinAsTab,
-}: TeamGraphOverlayProps): React.JSX.Element {
+}: TeamGraphOverlayProps): React.JSX.Element => {
   const graphData = useTeamGraphAdapter(teamName);
 
   const events: GraphEventPort = {
@@ -51,4 +54,4 @@ export function TeamGraphOverlay({
       />
     </div>
   );
-}
+};

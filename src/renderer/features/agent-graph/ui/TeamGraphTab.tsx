@@ -3,15 +3,18 @@
  */
 
 import { useCallback } from 'react';
+
 import { GraphView } from '@claude-teams/agent-graph';
-import type { GraphEventPort, GraphDomainRef } from '@claude-teams/agent-graph';
+
 import { useTeamGraphAdapter } from '../adapters/useTeamGraphAdapter';
+
+import type { GraphDomainRef, GraphEventPort } from '@claude-teams/agent-graph';
 
 export interface TeamGraphTabProps {
   teamName: string;
 }
 
-export function TeamGraphTab({ teamName }: TeamGraphTabProps): React.JSX.Element {
+export const TeamGraphTab = ({ teamName }: TeamGraphTabProps): React.JSX.Element => {
   const graphData = useTeamGraphAdapter(teamName);
 
   const events: GraphEventPort = {
@@ -21,8 +24,8 @@ export function TeamGraphTab({ teamName }: TeamGraphTabProps): React.JSX.Element
   };
 
   return (
-    <div className="h-full w-full" style={{ background: '#050510' }}>
-      <GraphView data={graphData} events={events} className="h-full w-full" />
+    <div className="size-full" style={{ background: '#050510' }}>
+      <GraphView data={graphData} events={events} className="size-full" />
     </div>
   );
-}
+};

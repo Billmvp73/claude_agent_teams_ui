@@ -7,16 +7,17 @@
  * Class-based with ES #private fields, caching, and DI-ready constructor.
  */
 
+import { isLeadMember } from '@shared/utils/leadDetection';
+
 import type {
   GraphDataPort,
-  GraphNode,
   GraphEdge,
-  GraphParticle,
+  GraphNode,
   GraphNodeState,
+  GraphParticle,
 } from '@claude-teams/agent-graph';
-import type { TeamData, InboxMessage, MemberSpawnStatusEntry } from '@shared/types/team';
+import type { InboxMessage, MemberSpawnStatusEntry, TeamData } from '@shared/types/team';
 import type { LeadContextUsage } from '@shared/types/team';
-import { isLeadMember } from '@shared/utils/leadDetection';
 
 export class TeamGraphAdapter {
   // ─── ES #private fields ──────────────────────────────────────────────────
@@ -48,7 +49,7 @@ export class TeamGraphAdapter {
     spawnStatuses?: Record<string, MemberSpawnStatusEntry>,
     leadContext?: LeadContextUsage
   ): GraphDataPort {
-    if (!teamData || teamData.teamName !== teamName) {
+    if (teamData?.teamName !== teamName) {
       return TeamGraphAdapter.#emptyResult(teamName);
     }
 

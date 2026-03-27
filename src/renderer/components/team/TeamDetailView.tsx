@@ -42,6 +42,7 @@ import {
   FolderOpen,
   GitBranch,
   History,
+  Network,
   Pencil,
   Play,
   Plus,
@@ -50,7 +51,6 @@ import {
   Trash2,
   UserPlus,
   Users,
-  Network,
 } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 

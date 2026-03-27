@@ -29,6 +29,7 @@ import * as path from 'path';
 import { gitIdentityResolver } from '../parsing/GitIdentityResolver';
 
 import { atomicWriteAsync } from './atomicWrite';
+import { buildTaskChangePresenceDescriptor } from './taskChangePresenceUtils';
 import { TeamConfigReader } from './TeamConfigReader';
 import { TeamInboxReader } from './TeamInboxReader';
 import { TeamInboxWriter } from './TeamInboxWriter';
@@ -40,8 +41,10 @@ import { TeamSentMessagesStore } from './TeamSentMessagesStore';
 import { TeamTaskCommentNotificationJournal } from './TeamTaskCommentNotificationJournal';
 import { TeamTaskReader } from './TeamTaskReader';
 import { TeamTaskWriter } from './TeamTaskWriter';
-import { buildTaskChangePresenceDescriptor } from './taskChangePresenceUtils';
 
+import type { PersistedTaskChangePresenceIndex } from './cache/taskChangePresenceCacheTypes';
+import type { TaskChangePresenceRepository } from './cache/TaskChangePresenceRepository';
+import type { TeamLogSourceTracker } from './TeamLogSourceTracker';
 import type {
   AddMemberRequest,
   AttachmentMeta,
@@ -54,6 +57,7 @@ import type {
   SendMessageRequest,
   SendMessageResult,
   TaskAttachmentMeta,
+  TaskChangePresenceState,
   TaskComment,
   TaskRef,
   TeamConfig,
@@ -64,15 +68,11 @@ import type {
   TeamSummary,
   TeamTask,
   TeamTaskStatus,
-  TaskChangePresenceState,
   TeamTaskWithKanban,
   ToolCallMeta,
   UpdateKanbanPatch,
 } from '@shared/types';
 import type { AgentTeamsController } from 'agent-teams-controller';
-import type { TaskChangePresenceRepository } from './cache/TaskChangePresenceRepository';
-import type { PersistedTaskChangePresenceIndex } from './cache/taskChangePresenceCacheTypes';
-import type { TeamLogSourceTracker } from './TeamLogSourceTracker';
 
 const { createController } = agentTeamsControllerModule;
 
@@ -241,8 +241,7 @@ export class TeamDataService {
       });
       const presenceEntry = presenceIndex.entries[task.id];
       result[task.id] =
-        presenceEntry &&
-        presenceEntry.taskSignature === descriptor.taskSignature &&
+        presenceEntry?.taskSignature === descriptor.taskSignature &&
         presenceEntry.logSourceGeneration === logSourceSnapshot.logSourceGeneration
           ? presenceEntry.presence
           : 'unknown';
