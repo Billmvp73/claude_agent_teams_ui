@@ -1,10 +1,3 @@
-import * as agentTeamsControllerModule from 'agent-teams-controller';
-import { type ChildProcess, type spawn } from 'child_process';
-import { randomUUID } from 'crypto';
-import * as fs from 'fs';
-import * as os from 'os';
-import * as path from 'path';
-
 import { ConfigManager } from '@main/services/infrastructure/ConfigManager';
 import { NotificationManager } from '@main/services/infrastructure/NotificationManager';
 import { getAppIconPath } from '@main/utils/appIcon';
@@ -49,6 +42,12 @@ import {
 } from '@shared/utils/teammateMessageParser';
 import { createCliAutoSuffixNameGuard, parseNumericSuffixName } from '@shared/utils/teamMemberName';
 import { extractToolPreview, formatToolSummaryFromCalls } from '@shared/utils/toolSummary';
+import * as agentTeamsControllerModule from 'agent-teams-controller';
+import { type ChildProcess, type spawn } from 'child_process';
+import { randomUUID } from 'crypto';
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
 
 import { buildActionModeProtocol } from './actionModeInstructions';
 import { atomicWriteAsync } from './atomicWrite';
