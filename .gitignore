@@ -49,3 +49,5 @@ eslint-fix/
 remotion/*
 
 .home/
+.generated/runtime-bundle/runtime/*
+!.generated/runtime-bundle/runtime/.gitkeep

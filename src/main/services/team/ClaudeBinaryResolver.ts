@@ -165,6 +165,19 @@ async function resolveFromExplicitPath(inputPath: string): Promise<string | null
   return null;
 }
 
+function collectBundledRuntimeCandidates(): string[] {
+  if (typeof process.resourcesPath !== 'string' || process.resourcesPath.length === 0) {
+    return [];
+  }
+
+  const binaryNames =
+    process.platform === 'win32'
+      ? ['claude-multimodel.exe', 'claude-multimodel']
+      : ['claude-multimodel'];
+
+  return binaryNames.map((binaryName) => path.join(process.resourcesPath, 'runtime', binaryName));
+}
+
 let cachedPath: string | null | undefined;
 
 /** Timestamp of last successful cache verification (ms). */
@@ -224,6 +237,14 @@ export class ClaudeBinaryResolver {
 
       if (resolvedOverride) {
         cachedPath = resolvedOverride;
+        cacheVerifiedAt = Date.now();
+        return cachedPath;
+      }
+    }
+
+    for (const candidate of collectBundledRuntimeCandidates()) {
+      if (await isExecutable(candidate)) {
+        cachedPath = candidate;
         cacheVerifiedAt = Date.now();
         return cachedPath;
       }
