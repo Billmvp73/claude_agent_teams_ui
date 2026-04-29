@@ -475,8 +475,10 @@ export class CliInstallerService {
 
   /**
    * Env for CLI subprocesses: login-shell vars + consistent HOME/PATH + same config root as the app.
+   * Awaits shell env resolution so Bedrock/AWS vars set in .zshenv are available before any CLI spawn.
    */
-  private envForCli(binaryPath: string): NodeJS.ProcessEnv {
+  private async envForCli(binaryPath: string): Promise<NodeJS.ProcessEnv> {
+    await resolveInteractiveShellEnv();
     return buildEnrichedEnv(binaryPath);
   }
 
@@ -887,7 +889,7 @@ export class CliInstallerService {
       try {
         const { stdout } = await execCli(binaryPath, ['--version'], {
           timeout: VERSION_TIMEOUT_MS,
-          env: this.envForCli(binaryPath),
+          env: await this.envForCli(binaryPath),
         });
         const version = normalizeVersion(stdout);
         if (!version) {
@@ -1007,7 +1009,7 @@ export class CliInstallerService {
         try {
           const { stdout: authStdout } = await execCli(binaryPath, ['auth', 'status'], {
             timeout: VERSION_TIMEOUT_MS,
-            env: this.envForCli(binaryPath),
+            env: await this.envForCli(binaryPath),
           });
           diag.authStdoutLen = authStdout.length;
           diag.authStdoutTail = authStdout.slice(-DIAG_AUTH_STDOUT_TAIL);
@@ -1284,9 +1286,10 @@ export class CliInstallerService {
    * Retries on EBUSY (antivirus scanning the new binary).
    */
   private async runInstallWithStreaming(binaryPath: string, attempt = 1): Promise<void> {
+    const installEnv = { ...(await this.envForCli(binaryPath)), CLAUDE_SKIP_ANALYTICS: '1' };
     return new Promise<void>((resolve, reject) => {
       const child = spawnCli(binaryPath, ['install'], {
-        env: { ...this.envForCli(binaryPath), CLAUDE_SKIP_ANALYTICS: '1' },
+        env: installEnv,
         stdio: ['ignore', 'pipe', 'pipe'],
       });
 
