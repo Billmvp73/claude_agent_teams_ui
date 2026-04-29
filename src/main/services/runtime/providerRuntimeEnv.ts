@@ -38,6 +38,11 @@ export function applyProviderRuntimeEnv(
 ): NodeJS.ProcessEnv {
   const resolvedProvider = resolveRuntimeProviderId(providerId);
 
+  // Preserve Bedrock routing before clearing routing keys — CLAUDE_CODE_USE_BEDROCK
+  // is set in the user's shell env when using Bedrock credentials, and must survive
+  // into child CLI processes for Anthropic provider.
+  const bedrockValue = resolvedProvider === 'anthropic' ? env.CLAUDE_CODE_USE_BEDROCK : undefined;
+
   for (const key of PROVIDER_ROUTING_ENV_KEYS) {
     env[key] = undefined;
   }
@@ -49,6 +54,10 @@ export function applyProviderRuntimeEnv(
   // silently fall back into the host's current routing world.
   env.CLAUDE_CODE_PROVIDER_MANAGED_BY_HOST = '1';
   env.CLAUDE_CODE_ENTRY_PROVIDER = resolvedProvider;
+
+  if (bedrockValue) {
+    env.CLAUDE_CODE_USE_BEDROCK = bedrockValue;
+  }
 
   return env;
 }
