@@ -570,16 +570,29 @@ export class ClaudeMultimodelBridgeService {
     );
   }
 
+  private static hasBedrockAuthEnv(env: NodeJS.ProcessEnv): boolean {
+    const useBedrock = (env.CLAUDE_CODE_USE_BEDROCK ?? '').trim();
+    if (useBedrock !== '1' && useBedrock.toLowerCase() !== 'true') {
+      return false;
+    }
+    return Boolean(
+      (env.AWS_ACCESS_KEY_ID ?? '').trim() ||
+      (env.AWS_PROFILE ?? '').trim() ||
+      (env.AWS_SESSION_TOKEN ?? '').trim()
+    );
+  }
+
   private mapRuntimeProviderStatus(
     providerId: CliProviderId,
-    runtimeStatus: NonNullable<UnifiedRuntimeStatusResponse['providers']>[string] | undefined
+    runtimeStatus: NonNullable<UnifiedRuntimeStatusResponse['providers']>[string] | undefined,
+    spawnEnv?: NodeJS.ProcessEnv
   ): CliProviderStatus {
     const provider = createDefaultProviderStatus(providerId);
     if (!runtimeStatus) {
       return provider;
     }
 
-    return {
+    const mapped: CliProviderStatus = {
       ...provider,
       supported: runtimeStatus.supported === true,
       authenticated: runtimeStatus.authenticated === true,
@@ -659,6 +672,26 @@ export class ClaudeMultimodelBridgeService {
           }
         : null,
     };
+
+    // runtime binary v0.0.12 does not recognize Bedrock credentials as authenticated.
+    // Override for Anthropic when the spawn env carries Bedrock vars.
+    if (
+      providerId === 'anthropic' &&
+      !mapped.authenticated &&
+      spawnEnv &&
+      ClaudeMultimodelBridgeService.hasBedrockAuthEnv(spawnEnv)
+    ) {
+      return {
+        ...mapped,
+        authenticated: true,
+        authMethod: 'bedrock',
+        verificationState: 'verified',
+        statusMessage: 'Connected via Bedrock',
+        detailMessage: null,
+      };
+    }
+
+    return mapped;
   }
 
   private applyConnectionIssue(
@@ -713,7 +746,7 @@ export class ClaudeMultimodelBridgeService {
     const parsed = extractJsonObject<UnifiedRuntimeStatusResponse>(stdout);
     return providerConnectionService.enrichProviderStatus(
       this.applyConnectionIssue(
-        this.mapRuntimeProviderStatus(providerId, parsed.providers?.[providerId]),
+        this.mapRuntimeProviderStatus(providerId, parsed.providers?.[providerId], env),
         connectionIssues
       )
     );
@@ -1058,7 +1091,7 @@ export class ClaudeMultimodelBridgeService {
       const providers = await providerConnectionService.enrichProviderStatuses(
         this.applyConnectionIssues(
           ORDERED_PROVIDER_IDS.map((providerId) =>
-            this.mapRuntimeProviderStatus(providerId, parsed.providers?.[providerId])
+            this.mapRuntimeProviderStatus(providerId, parsed.providers?.[providerId], env)
           ),
           connectionIssues
         )
@@ -1102,10 +1135,21 @@ export class ClaudeMultimodelBridgeService {
           providers.set(providerId, {
             ...providers.get(providerId)!,
             supported: runtimeStatus.supported === true,
-            authenticated: runtimeStatus.authenticated === true,
-            authMethod: runtimeStatus.authMethod ?? null,
+            authenticated:
+              runtimeStatus.authenticated === true ||
+              (providerId === 'anthropic' && ClaudeMultimodelBridgeService.hasBedrockAuthEnv(env)),
+            authMethod:
+              runtimeStatus.authMethod ??
+              (providerId === 'anthropic' && ClaudeMultimodelBridgeService.hasBedrockAuthEnv(env)
+                ? 'bedrock'
+                : null),
             verificationState: runtimeStatus.verificationState ?? 'unknown',
-            statusMessage: runtimeStatus.statusMessage ?? null,
+            statusMessage:
+              runtimeStatus.authenticated !== true &&
+              providerId === 'anthropic' &&
+              ClaudeMultimodelBridgeService.hasBedrockAuthEnv(env)
+                ? 'Connected via Bedrock'
+                : (runtimeStatus.statusMessage ?? null),
             detailMessage: runtimeStatus.detailMessage ?? null,
             canLoginFromUi: runtimeStatus.canLoginFromUi !== false,
             capabilities: {
